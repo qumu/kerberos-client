@@ -1,0 +1,6 @@
+# Set hostname david.nhstest.leon.net and /etc/hosts 127.0.0.1
+app:
+    user-principal: CLI/clientuser.domain.com@DOMAIN.COM
+    keytab-location: /tmp/clientuser.keytab
+    access-url: http://service.domain.com:8081/hello
+    use-http-client: true
