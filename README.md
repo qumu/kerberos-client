@@ -14,12 +14,12 @@ is hardcoded into the default implementation of `SPNegoScheme`)
 
   - `SERV/yourusername.domain.com` as `User logon name`
   - `yourusername` as `User logon name (pre-Windows 2000)` if present
-  
+
 * In Windows, as Administrator, set an SPN for that user:
 
 ```
 setspn -A SERV/yourusername.domain.com yourusername
-```  
+```
 
 * Then generate a `keytab` file:
 
@@ -64,7 +64,7 @@ ktpass /out C:\yourusername.keytab /mapuser yourusername@DOMAIN.COM /princ SERV/
 
 - `access-url`: endpoint to access in the server. This has to contain a fully qualified domain name of the server host. This hostname has to be a user defined in the same Kerberos Realm / Domain Controller as the client if using `HOST_BASED` name strategy for GSS (i.e: `yourusername.domain.com`)
 - `user-principal`: fully qualified SPN of the created user, i.e. `SERV/yourusername.domain.com@DOMAIN.COM`
-    
+
 
 * Launch `Kerberos Server` in a host named `yourusername.domain.com` if this client uses `HOST_BASED` name generation.
 
@@ -81,6 +81,11 @@ ktpass /out C:\yourusername.keytab /mapuser yourusername@DOMAIN.COM /princ SERV/
 java -jar build/libs/kerberos-client-0.1.jar
 ```
 
+* Config file `application.yml` can be overriden at execution time. Just provide a file with the same name in directory the previous command in executed from (not where the JAR lives) or give an extra command line attribute:
+
+```
+java -jar build/libs/kerberos-client-0.1.jar --spring.config.location=/path/to/propertiesFile.yml
+```
 
 ## Limitations
 
@@ -88,7 +93,13 @@ java -jar build/libs/kerberos-client-0.1.jar
 - Only GET requests can be performed at the moment, returning a String response
 
 
+## Resources
 
-  
+* Using JGSS to generate and consume Kerberos/SPNEGO tokens [here](https://dmdaa.wordpress.com/2010/10/16/how-to-obtain-and-authenticate-kerberos-and-spnego-tokens-with-jgss)
+* Simple example of high level Client/Server using GSS-API [here](http://thejavamonkey.blogspot.co.uk/2008/04/clientserver-hello-world-in-kerberos.html)
+* More low level example of Client/Server, using mutual authentication checks [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/BasicClientServer.html), [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/SampleServer.java) and [here](https://docs.oracle.com/javase/7/docs/technotes/guides/security/jgss/tutorials/SampleClient.java)
+* Spring Security Kerberos [docs](http://docs.spring.io/autorepo/docs/spring-security-kerberos/1.0.0.RC1/reference/htmlsingle/#setupmitkerberos)
+
+
 
 
