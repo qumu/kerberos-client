@@ -19,12 +19,12 @@ public class Application implements CommandLineRunner {
 	@Value("${app.user-principal}")
 	private String userPrincipal;
 
-	@Value("${app.keytab-location}")
+	@Value("${app.keytab-location:}")
 	private String keytabLocation;
 
 	@Value("${app.access-url}")
 	private String accessUrl;
-	
+
 	@Value("${app.use-http-client}")
 	private String useHttpClient;
 
@@ -41,13 +41,13 @@ public class Application implements CommandLineRunner {
 		String response = kerberosHttpClient.execute(accessUrl);
 		return response;
 	}
-	
+
 	private String useRestTemplate() {
 		KerberosRestTemplate restTemplate = new CustomKerberosRestTemplate(keytabLocation, userPrincipal);
 		String response = restTemplate.getForObject(accessUrl, String.class);
 		return response;
 	}
-	
+
     public static void main(String[] args) throws Throwable {
     	new SpringApplicationBuilder(Application.class).web(false).run(args);
     }
