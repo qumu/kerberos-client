@@ -8,8 +8,8 @@ import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.security.kerberos.client.KerberosRestTemplate;
 
-import com.qumu.kerberos.client.httpclient.KerberosHttpClient;
-import com.qumu.kerberos.client.httpclient.ServiceNameSource;
+import com.qumu.kerberos.client.KerberosService;
+import com.qumu.kerberos.client.httpclient.ServiceNameType;
 import com.qumu.kerberos.client.resttemplate.CustomKerberosRestTemplate;
 
 @SpringBootApplication
@@ -32,18 +32,26 @@ public class Application implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		System.out.println("Running Kerberos call to url: " + accessUrl + ", user principal: " + userPrincipal + ", keytab: " + keytabLocation);
 		boolean useHttpClientBoolean = Boolean.parseBoolean(useHttpClient);
+
+		System.out.println("Use HttpClient customised: " + useHttpClientBoolean);
+
 		String response = useHttpClientBoolean ? useSimpleHttpClient() : useRestTemplate();
 		System.out.println("The response obtained is " + response);
 	}
 
 	private String useSimpleHttpClient() {
-		KerberosHttpClient kerberosHttpClient = new KerberosHttpClient(keytabLocation, userPrincipal, ServiceNameSource.HOST_BASED);
-		String response = kerberosHttpClient.execute(accessUrl);
+//		KerberosHttpClient kerberosHttpClient = new KerberosHttpClient(keytabLocation, userPrincipal, ServiceNameSource.HOST_BASED);
+//		KerberosHttpClient kerberosHttpClient = ;
+//		String response = kerberosHttpClient.execute(accessUrl);
+		String response = "";
+		KerberosService kerberosService = new KerberosService();
+		kerberosService.setup(keytabLocation, userPrincipal, ServiceNameType.HOST_BASED);
+		kerberosService.executeKerberosValidation(accessUrl);
 		return response;
 	}
 
 	private String useRestTemplate() {
-		KerberosRestTemplate restTemplate = new CustomKerberosRestTemplate(keytabLocation, userPrincipal);
+		KerberosRestTemplate restTemplate = new CustomKerberosRestTemplate(null, userPrincipal);
 		String response = restTemplate.getForObject(accessUrl, String.class);
 		return response;
 	}

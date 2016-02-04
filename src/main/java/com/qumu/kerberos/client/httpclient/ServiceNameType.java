@@ -1,5 +1,5 @@
 package com.qumu.kerberos.client.httpclient;
 
-public enum ServiceNameSource {
+public enum ServiceNameType {
 	HOST_BASED, USER_BASED;
 }

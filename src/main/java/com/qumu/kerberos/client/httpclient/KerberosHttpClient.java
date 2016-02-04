@@ -31,45 +31,46 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.springframework.util.StringUtils;
 
 /**
- * 
- * Based on Spring's implementation of KerberosRestTemplate, simplified version 
+ *
+ * Based on Spring's implementation of KerberosRestTemplate, simplified version
  * that only allows making a GET request using a HttpClient that uses SPNEGO to communicate
  * with a kerberized server and the response is read as a String.
- * 
+ *
  * If a keytab file is provided it will be used to log into the Auth Server, otherwise a ticket cache
  * will be used.
- * 
- * Ensure the hostname/domain of the server (url passed in) is part of the Kerberos realm / Domain controller 
- * 
+ *
+ * Ensure the hostname/domain of the server (url passed in) is part of the Kerberos realm / Domain controller
+ *
  * @author davidfernandez
  *
  */
 public class KerberosHttpClient {
-	
+
 	private static final Log LOG = LogFactory.getLog(KerberosHttpClient.class);
-	
+
+	@SuppressWarnings("synthetic-access")
 	private static final Credentials credentials = new NullCredentials();
+
 	private String keyTabLocation;
 	private String userPrincipal;
 	private HttpClient httpClient;
 	private Map<String, Object> loginOptions;
-	private ServiceNameSource serviceNameSource;
-	
-	public KerberosHttpClient(String keytabLocation, String userPrincipal, ServiceNameSource serviceNameSource) {
-			this.keyTabLocation = keytabLocation;
-			this.userPrincipal = userPrincipal;
-			this.serviceNameSource = serviceNameSource;
-			this.httpClient = buildHttpClient();
-			
+	private ServiceNameType serviceNameType;
+
+	public KerberosHttpClient(String keytabLocation, String userPrincipal, ServiceNameType serviceNameType) {
+		this.keyTabLocation = keytabLocation;
+		this.userPrincipal = userPrincipal;
+		this.serviceNameType = serviceNameType;
+		this.httpClient = buildHttpClient();
 	}
-	
+
 	/**
-	 * Builds the default instance of {@link HttpClient} having kerberos
-	 * support. 
-	 * 
-	 * It puts the flag useCanonicalHostname to false in the SpnegoSchemeFactory 
-	 * to make the login to auth server work by doing a 'shallow' inspect of the server hostname 
-	 * (without lookups) so this can be used with hosts that use aliases of localhost and still be 
+	 * Builds the default instance of {@link HttpClient} having Kerberos/SPNEGO
+	 * support.
+	 *
+	 * It puts the flag useCanonicalHostname to false in the SpnegoSchemeFactory
+	 * to make the login to auth server work by doing a 'shallow' inspect of the server hostname
+	 * (without lookups) so this can be used with hosts that use aliases of localhost and still be
 	 * recognized as part of the Kerberos realm
 	 *
 	 * @return the http client with spnego auth scheme
@@ -77,17 +78,17 @@ public class KerberosHttpClient {
 	private HttpClient buildHttpClient() {
 		HttpClientBuilder builder = HttpClientBuilder.create();
 		Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
-				.register(AuthSchemes.SPNEGO, new CustomSPNegoSchemeFactory(serviceNameSource, userPrincipal, true, false)).build();
+				.register(AuthSchemes.SPNEGO, new CustomSPNegoSchemeFactory(serviceNameType, userPrincipal, true, false)).build();
 		builder.setDefaultAuthSchemeRegistry(authSchemeRegistry);
 		BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
 		credentialsProvider.setCredentials(new AuthScope(null, -1, null), credentials);
 		builder.setDefaultCredentialsProvider(credentialsProvider);
-		CloseableHttpClient httpClient = builder.build();
-		return httpClient;
+		CloseableHttpClient builtHttpClient = builder.build();
+		return builtHttpClient;
 	}
-	
-	public String execute(final String url) {
-		
+
+	public String executeGet(final String url) {
+
 		try {
 			ClientLoginConfig loginConfig = new ClientLoginConfig(keyTabLocation, userPrincipal, loginOptions);
 			Set<Principal> princ = new HashSet<Principal>(1);
@@ -97,6 +98,7 @@ public class KerberosHttpClient {
 			lc.login();
 			Subject serviceSubject = lc.getSubject();
 			return Subject.doAs(serviceSubject, new PrivilegedAction<String>() {
+				@SuppressWarnings("synthetic-access")
 				@Override
 				public String run() {
 					return executeRequest(url);
@@ -106,15 +108,15 @@ public class KerberosHttpClient {
 			throw new RuntimeException("Error running call", e);
 		}
 	}
-	
+
 	private String executeRequest(String url) {
-		
-		HttpGet httpGet = new HttpGet(url); 
-	
+
+		HttpGet httpGet = new HttpGet(url);
+
 		try {
-			
+
 			HttpResponse response = httpClient.execute(httpGet);
-			
+
 			if (response.getStatusLine().getStatusCode() != 200) {
 				String msg = "Error in request to " + url + ", status is " + response.getStatusLine().getStatusCode() + ", reason " + response.getStatusLine().getReasonPhrase();
 				LOG.error(msg);
@@ -122,12 +124,12 @@ public class KerberosHttpClient {
 			}
 
 			return IOUtils.toString(response.getEntity().getContent());
-		} catch (Throwable t) {
-			LOG.error("Error executing call to " + url, t);
-			throw new RuntimeException(t);
+		} catch (Exception e) {
+			LOG.error("Error executing call to " + url, e);
+			throw new RuntimeException(e);
 		}
 	}
-	
+
 	private static class NullCredentials implements Credentials {
 
 		@Override
@@ -141,7 +143,7 @@ public class KerberosHttpClient {
 		}
 
 	}
-	
+
 	private static class ClientLoginConfig extends Configuration {
 
 		private final String keyTabLocation;
@@ -183,15 +185,15 @@ public class KerberosHttpClient {
 					"com.sun.security.auth.module.Krb5LoginModule",
 					AppConfigurationEntry.LoginModuleControlFlag.REQUIRED, options) };
 		}
-	}	
+	}
 }
 
 //Pure Java 8
 //------------
 //public String executeJ8(final String url, PrivilegedAction<String> httpRequestAction) {
-//	
+//
 //	try {
-//		
+//
 //		ClientLoginConfig loginConfig = new ClientLoginConfig(keyTabLocation, userPrincipal, loginOptions);
 //		Set<Principal> princ = new HashSet<Principal>(1);
 //		princ.add(new KerberosPrincipal(userPrincipal));
@@ -200,7 +202,7 @@ public class KerberosHttpClient {
 //		lc.login();
 //		Subject serviceSubject = lc.getSubject();
 //		return Subject.doAs(serviceSubject, httpRequestAction);
-//		
+//
 //	} catch (Exception e) {
 //		throw new RuntimeException("Error running call", e);
 //	}
@@ -208,15 +210,15 @@ public class KerberosHttpClient {
 //
 //private void callerJ8(String url) {
 //	this.executeJ8(url, () -> { return executeRequest(url); });
-//}	
+//}
 //	public interface StateChangeListener<T> {
 //	    public T onStateChange();
 //	}
-//	
+//
 //	private void addState(StateChangeListener<String> lst) {
 //		System.out.println("yes");
 //	}
-//	
+//
 //	private void test() {
 //		this.addState(() -> { return "Yes"; });
 //	}

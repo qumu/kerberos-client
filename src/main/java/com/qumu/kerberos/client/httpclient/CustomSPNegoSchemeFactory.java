@@ -6,17 +6,17 @@ import org.apache.http.protocol.HttpContext;
 
 public class CustomSPNegoSchemeFactory extends SPNegoSchemeFactory {
 
-	private ServiceNameSource serviceNameSource;
-	private String spnPrincipal;
-	
-	public CustomSPNegoSchemeFactory(ServiceNameSource serviceNameSource, String spnPrincipal, final boolean stripPort, final boolean useCanonicalHostname) {
+	private ServiceNameType serviceNameType;
+	private String principal;
+
+	public CustomSPNegoSchemeFactory(ServiceNameType serviceNameType, String principal, final boolean stripPort, final boolean useCanonicalHostname) {
 	   super(stripPort, useCanonicalHostname);
-	   this.spnPrincipal = spnPrincipal;
-	   this.serviceNameSource = serviceNameSource;
+	   this.principal = principal;
+	   this.serviceNameType = serviceNameType;
 	}
 
     @Override
     public AuthScheme create(final HttpContext context) {
-        return new CustomSPNegoScheme(spnPrincipal, serviceNameSource, super.isStripPort(), super.isUseCanonicalHostname());
+        return new CustomSPNegoScheme(principal, serviceNameType, super.isStripPort(), super.isUseCanonicalHostname());
     }
 }

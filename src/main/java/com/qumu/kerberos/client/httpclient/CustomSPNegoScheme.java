@@ -13,18 +13,18 @@ import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 
 public class CustomSPNegoScheme extends SPNegoScheme {
-	
+
 	private static final Log LOG = LogFactory.getLog(CustomSPNegoScheme.class);
-	
-    private String spnPrincipal;
-    private ServiceNameSource serviceNameSource; 
-    
-    public CustomSPNegoScheme(String spnPrincipal, ServiceNameSource serviceNameSource, final boolean stripPort, final boolean useCanonicalHostname) {
+
+	private String userPrincipal;
+    private ServiceNameType serviceNameType;
+
+    public CustomSPNegoScheme(String userPrincipal, ServiceNameType serviceNameType, final boolean stripPort, final boolean useCanonicalHostname) {
         super(stripPort, useCanonicalHostname);
-        this.spnPrincipal = spnPrincipal;
-        this.serviceNameSource = serviceNameSource;
+        this.userPrincipal = userPrincipal;
+        this.serviceNameType = serviceNameType;
     }
-	
+
 	@Override
 	protected byte[] generateGSSToken(
             final byte[] input, final Oid oid, final String authServer,
@@ -34,9 +34,9 @@ public class CustomSPNegoScheme extends SPNegoScheme {
             inputBuff = new byte[0];
         }
         final GSSManager manager = getManager();
-       
+
         GSSName gssName = generateGSSName(manager, authServer);
-        
+
         final GSSCredential gssCredential;
         if (credentials instanceof KerberosCredentials) {
             gssCredential = ((KerberosCredentials) credentials).getGSSCredential();
@@ -50,63 +50,76 @@ public class CustomSPNegoScheme extends SPNegoScheme {
         gssContext.requestCredDeleg(true);
         return gssContext.initSecContext(inputBuff, 0, inputBuff.length);
     }
-	
+
 	private GSSName generateGSSName(GSSManager manager, String authServer) throws GSSException {
-		
+
 		GSSName gssName;
-		
+
 		if (LOG.isDebugEnabled()) {
-			LOG.debug("Generating GSS Name, authServer is: " + authServer + ", spnPrincipal: " + spnPrincipal + 
-					  ", serviceNameSource: " + serviceNameSource != null ? serviceNameSource.name() : "null");
+			String servNameSource = serviceNameType != null ? serviceNameType.name() : "null";
+			LOG.debug("Generating GSS Name, authServer is: " + authServer + ", principal: " + userPrincipal +
+					  ", serviceNameSource: " + servNameSource);
 		}
-		
-		if (spnPrincipal != null || serviceNameSource != null) {
-			
-			// A SPN Principal (SPN) is provided along with an strategy to generate the serviceName
-			
-			// HTTP/user.domain.com@DOMAIN.COM
-			String[] spnPrincipalParts = spnPrincipal.split("@");
-			
-			// We keep HTTP/user.domain.com
-			String prefixAndUser = spnPrincipalParts[0];
-			
-			String[] prefixAndHostOrUserParts = prefixAndUser.split("/");
-			String prefix = prefixAndHostOrUserParts[0];
-			String hostOrUser = prefixAndHostOrUserParts[1];
-			
+
+		if (userPrincipal != null || serviceNameType != null) {
+
+			// A user principal is provided along with an strategy to generate the serviceName
+			if (LOG.isDebugEnabled()) {
+				LOG.debug("Principal is: " + userPrincipal + ", serviceNameType is: " + serviceNameType);
+			}
+
+			// HTTP/user.domain.com@DOMAIN.COM or username@DOMAIN.COM
+			String[] principalParts = userPrincipal.split("@");
+
+			// We keep the first part
+			String prefixAndUser = principalParts[0];
+
+			// Default to HTTP service
+			String prefix = "HTTP";
+			String realmName = principalParts[1];
+
 			Oid gssNameOid = null;
 			String nameStr = null;
-			
-			switch (serviceNameSource) {
+
+			if (prefixAndUser.contains("/")) {
+
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Principal contains a service definition, extracting it to generate GSSName");
+				}
+
+				String[] prefixAndHostOrUserParts = prefixAndUser.split("/");
+				prefix = prefixAndHostOrUserParts[0];
+				realmName = prefixAndHostOrUserParts[1];
+			}
+
+			switch (serviceNameType) {
 				case HOST_BASED:
 					gssNameOid = GSSName.NT_HOSTBASED_SERVICE;
 					nameStr = prefix  + "@" + authServer;
 					break;
 				case USER_BASED:
+					//FIXME: currently not working
 					gssNameOid =  GSSName.NT_USER_NAME;
-					nameStr = prefix + "@" + hostOrUser;
+					nameStr = prefix + "@" + realmName;
 					break;
 			}
-			
+
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("Generated GSSName: " + nameStr + ", OID: " + gssNameOid);
 			}
-			
+
 			gssName = manager.createName(nameStr, gssNameOid);
-			
+
 		} else {
-			
+
 			if (LOG.isDebugEnabled()) {
 				LOG.debug("Generated GSSName using default (HTTP) prefix and host based OID " + "HTTP@" + authServer);
 			}
-			
-			// This is the default: HTTP prefix and host based
+
+			// This is the default implementation: HTTP prefix and host based
 			gssName = manager.createName("HTTP@" + authServer, GSSName.NT_HOSTBASED_SERVICE);
 		}
-		
+
 		return gssName;
 	}
-	
-	
-	
 }
