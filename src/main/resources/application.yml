@@ -2,10 +2,13 @@
 # Keytab is optional
 # app:
 #    keytab-location: /tmp/keytab.keytab
-# The ticket cache will be used if no keytab is present
-# The user principal could be a SPN defining a service (SERV/user@domain) or directly
-# a single principal (user@domain)
+# - The ticket cache will be used if no keytab is present
+# - The user principal could be a SPN defining a service (SERV/user@domain) or directly
+#  a single principal (user@domain)
+# - service-name-type: USER_BASED (requires a service-principal indicating the service SPN) 
 app:
     user-principal: SERV/user@DOMAIN.COM
+    service-principal: SERV/serviceUser@DOMAIN.COM
+    service-name-type: HOST_BASED
     access-url: http://serviceServer:8081/validateEndpoint
     use-http-client: false

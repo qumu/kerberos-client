@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.SecurityAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.security.kerberos.client.KerberosRestTemplate;
+import org.springframework.util.StringUtils;
 
 import com.qumu.kerberos.client.KerberosService;
 import com.qumu.kerberos.client.httpclient.ServiceNameType;
@@ -24,6 +25,12 @@ public class Application implements CommandLineRunner {
 
 	@Value("${app.access-url}")
 	private String accessUrl;
+
+	@Value("${app.service-name-type:}")
+	private String serviceNameTypeProperty;
+
+	@Value("${app.service-principal:}")
+	private String servicePrincipal;
 
 	@Value("${app.use-http-client}")
 	private String useHttpClient;
@@ -44,8 +51,10 @@ public class Application implements CommandLineRunner {
 //		KerberosHttpClient kerberosHttpClient = ;
 //		String response = kerberosHttpClient.execute(accessUrl);
 		String response = "";
+		ServiceNameType serviceNameType = (StringUtils.hasText(serviceNameTypeProperty)) ? ServiceNameType.valueOf(serviceNameTypeProperty) : ServiceNameType.HOST_BASED;
 		KerberosService kerberosService = new KerberosService();
-		kerberosService.setup(keytabLocation, userPrincipal, ServiceNameType.HOST_BASED);
+		String servicePrincipalValue = (StringUtils.hasText(servicePrincipal)) ? servicePrincipal : null;
+		kerberosService.setup(keytabLocation, userPrincipal, servicePrincipalValue, serviceNameType);
 		kerberosService.executeKerberosValidation(accessUrl);
 		return response;
 	}

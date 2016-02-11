@@ -18,11 +18,17 @@ public class CustomSPNegoScheme extends SPNegoScheme {
 
 	private String userPrincipal;
     private ServiceNameType serviceNameType;
+    private String servicePrincipal;
 
-    public CustomSPNegoScheme(String userPrincipal, ServiceNameType serviceNameType, final boolean stripPort, final boolean useCanonicalHostname) {
+    public CustomSPNegoScheme(String userPrincipal, String servicePrincipal, ServiceNameType serviceNameType, final boolean stripPort, final boolean useCanonicalHostname) {
         super(stripPort, useCanonicalHostname);
         this.userPrincipal = userPrincipal;
         this.serviceNameType = serviceNameType;
+        this.servicePrincipal = servicePrincipal;
+    }
+
+    public CustomSPNegoScheme(String userPrincipal, ServiceNameType serviceNameType, final boolean stripPort, final boolean useCanonicalHostname) {
+    	this(userPrincipal, null, serviceNameType, stripPort, useCanonicalHostname);
     }
 
 	@Override
@@ -72,24 +78,22 @@ public class CustomSPNegoScheme extends SPNegoScheme {
 			String[] principalParts = userPrincipal.split("@");
 
 			// We keep the first part
-			String prefixAndUser = principalParts[0];
+			String prefixAndUserName = principalParts[0];
 
 			// Default to HTTP service
 			String prefix = "HTTP";
-			String realmName = principalParts[1];
 
 			Oid gssNameOid = null;
 			String nameStr = null;
 
-			if (prefixAndUser.contains("/")) {
+			if (prefixAndUserName.contains("/")) {
 
 				if (LOG.isDebugEnabled()) {
 					LOG.debug("Principal contains a service definition, extracting it to generate GSSName");
 				}
 
-				String[] prefixAndHostOrUserParts = prefixAndUser.split("/");
+				String[] prefixAndHostOrUserParts = prefixAndUserName.split("/");
 				prefix = prefixAndHostOrUserParts[0];
-				realmName = prefixAndHostOrUserParts[1];
 			}
 
 			switch (serviceNameType) {
@@ -98,22 +102,24 @@ public class CustomSPNegoScheme extends SPNegoScheme {
 					nameStr = prefix  + "@" + authServer;
 					break;
 				case USER_BASED:
-					//FIXME: currently not working
+					// NT_USER_NAME is the same as KRB5_PRINCIPAL_NAME oid
+					// Oid KRB5_PRINCIPAL_NAME_OID = new Oid("1.2.840.113554.1.2.2.1");
 					gssNameOid =  GSSName.NT_USER_NAME;
-					nameStr = prefix + "@" + realmName;
+					nameStr = servicePrincipal;
 					break;
 			}
 
 			if (LOG.isDebugEnabled()) {
-				LOG.debug("Generated GSSName: " + nameStr + ", OID: " + gssNameOid);
+				LOG.debug("Generated GSSName: " + nameStr);
 			}
 
+			// NT_USER_NAME is the same as KRB5_PRINCIPAL_NAME oid
 			gssName = manager.createName(nameStr, gssNameOid);
 
 		} else {
 
 			if (LOG.isDebugEnabled()) {
-				LOG.debug("Generated GSSName using default (HTTP) prefix and host based OID " + "HTTP@" + authServer);
+				LOG.debug("Generated GSSName using default (HTTP) prefix and host based OID HTTP@" + authServer);
 			}
 
 			// This is the default implementation: HTTP prefix and host based

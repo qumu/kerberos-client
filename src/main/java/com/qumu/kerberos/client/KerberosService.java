@@ -13,12 +13,17 @@ public class KerberosService {
 
 	private String userPrincipal;
 
+	private String servicePrincipal;
+
 	private KerberosHttpClient kerberosHttpClient;
 
 	private ServiceNameType serviceNameType;
 
-	public void setup(String keytab, String principal, ServiceNameType serviceNameSource) {
-		this.kerberosHttpClient = new KerberosHttpClient(keytab, principal, serviceNameSource);
+	public void setup(String keytab, String userPrincipal, String servicePrincipal, ServiceNameType serviceNameType) {
+		this.userPrincipal = userPrincipal;
+		this.servicePrincipal = servicePrincipal;
+		this.serviceNameType = serviceNameType;
+		this.kerberosHttpClient = new KerberosHttpClient(keytab, userPrincipal, servicePrincipal, serviceNameType);
 	}
 
 	/**
@@ -33,7 +38,9 @@ public class KerberosService {
 
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Initiating validation for Kerberos, authenticator service url is: " + authenticatorServiceUrl +
-					" user principal is: " + userPrincipal + ", serviceNameType is: " + serviceNameType);
+					" user principal is: " + userPrincipal +
+					", serviceNameType is: " + serviceNameType +
+					", servicePrincipal: " + servicePrincipal);
 		}
 
 		try  {

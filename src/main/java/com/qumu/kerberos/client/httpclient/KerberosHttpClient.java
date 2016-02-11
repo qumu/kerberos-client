@@ -53,14 +53,20 @@ public class KerberosHttpClient {
 
 	private String keyTabLocation;
 	private String userPrincipal;
+	private String servicePrincipal;
 	private HttpClient httpClient;
 	private Map<String, Object> loginOptions;
 	private ServiceNameType serviceNameType;
 
 	public KerberosHttpClient(String keytabLocation, String userPrincipal, ServiceNameType serviceNameType) {
+		this(keytabLocation, userPrincipal, null, serviceNameType);
+	}
+
+	public KerberosHttpClient(String keytabLocation, String userPrincipal, String servicePrincipal, ServiceNameType serviceNameType) {
 		this.keyTabLocation = keytabLocation;
 		this.userPrincipal = userPrincipal;
 		this.serviceNameType = serviceNameType;
+		this.servicePrincipal = servicePrincipal;
 		this.httpClient = buildHttpClient();
 	}
 
@@ -78,7 +84,7 @@ public class KerberosHttpClient {
 	private HttpClient buildHttpClient() {
 		HttpClientBuilder builder = HttpClientBuilder.create();
 		Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
-				.register(AuthSchemes.SPNEGO, new CustomSPNegoSchemeFactory(serviceNameType, userPrincipal, true, false)).build();
+				.register(AuthSchemes.SPNEGO, new CustomSPNegoSchemeFactory(serviceNameType, userPrincipal, servicePrincipal, true, false)).build();
 		builder.setDefaultAuthSchemeRegistry(authSchemeRegistry);
 		BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
 		credentialsProvider.setCredentials(new AuthScope(null, -1, null), credentials);
